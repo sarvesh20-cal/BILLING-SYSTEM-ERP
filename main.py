@@ -5,7 +5,7 @@ ctk.set_appearance_mode("Light")
 ctk.set_default_color_theme("blue")
 
 app = ctk.CTk()
-app.geometry("1400x850")
+app.geometry("1100x650")
 app.title("Billing & Invoice System")
 
 LoginPage(app)
