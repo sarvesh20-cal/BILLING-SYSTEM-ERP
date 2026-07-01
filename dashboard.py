@@ -2,6 +2,7 @@ import customtkinter as ctk
 from tkinter import ttk
 from datetime import datetime
 import mysql.connector
+
 from customers import CustomersPage
 from products import ProductsPage
 
@@ -11,10 +12,17 @@ class Dashboard:
     def __init__(self, root):
 
         self.root = root
+        self.sidebar_expanded = True
 
-        # ==============================
-        # MAIN LAYOUT
-        # ==============================
+        # =====================================
+        # WINDOW
+        # =====================================
+
+        self.root.title("Billing ERP")
+
+        # =====================================
+        # SIDEBAR
+        # =====================================
 
         self.sidebar = ctk.CTkFrame(
             root,
@@ -22,77 +30,39 @@ class Dashboard:
             fg_color="#0F172A",
             corner_radius=0
         )
-        self.sidebar.pack(side="left", fill="y")
+
+        self.sidebar.pack(
+            side="left",
+            fill="y"
+        )
+
+        self.sidebar.pack_propagate(False)
+
+        # =====================================
+        # MAIN FRAME
+        # =====================================
 
         self.main_frame = ctk.CTkFrame(
             root,
             fg_color="#F4F6F9"
         )
+
         self.main_frame.pack(
             side="right",
             fill="both",
             expand=True
         )
-        # ==============================
-        # SIDEBAR
-        # ==============================
 
-        self.logo = ctk.CTkLabel(
-            self.sidebar,
-            text="Billing ERP",
-            font=("Segoe UI", 28, "bold"),
-            text_color="white"
-        )
-        self.logo.pack(pady=30)
-
-        self.create_sidebar_button(
-            "🏠 Dashboard",
-            self.show_dashboard)
-
-        self.create_sidebar_button(
-            "👤 Customers",
-            self.open_customers
-        )
-
-        self.create_sidebar_button(
-            "📦 Products",
-            self.open_products
-        )
-
-        self.create_sidebar_button(
-            "🧾 Billing",
-            self.open_billing
-        )
-
-        self.create_sidebar_button(
-            "📄 Invoices",
-            self.open_invoices
-        )
-
-        self.create_sidebar_button(
-            "📊 Reports",
-            self.open_reports
-        )
-
-        self.create_sidebar_button(
-            "⚙ Settings",
-            self.open_settings
-        )
-
-        self.create_sidebar_button(
-            "🚪 Logout",
-            self.logout
-        )
-
-        # ==============================
+        # =====================================
         # HEADER
-        # ==============================
+        # =====================================
 
         self.header = ctk.CTkFrame(
             self.main_frame,
             height=80,
             fg_color="white"
         )
+
         self.header.pack(
             fill="x",
             padx=20,
@@ -101,13 +71,13 @@ class Dashboard:
 
         self.header.pack_propagate(False)
 
-        self.title = ctk.CTkLabel(
+        self.title_label = ctk.CTkLabel(
             self.header,
-            text="Dashboard",
-            font=("Segoe UI", 28, "bold"),
-            text_color="#111827"
+            text="Billing ERP Dashboard",
+            font=("Segoe UI", 28, "bold")
         )
-        self.title.pack(
+
+        self.title_label.pack(
             side="left",
             padx=20
         )
@@ -115,143 +85,138 @@ class Dashboard:
         self.clock = ctk.CTkLabel(
             self.header,
             text="",
-            font=("Segoe UI", 16),
-            text_color="#6B7280"
+            font=("Segoe UI", 16)
         )
+
         self.clock.pack(
             side="right",
             padx=20
         )
 
+        # =====================================
+        # CONTENT FRAME
+        # =====================================
+
+        self.content_frame = ctk.CTkFrame(
+            self.main_frame,
+            fg_color="#F4F6F9"
+        )
+
+        self.content_frame.pack(
+            fill="both",
+            expand=True,
+            padx=15,
+            pady=(0, 15)
+        )
+
+        # =====================================
+        # SIDEBAR CONTENT
+        # =====================================
+
+        self.logo = ctk.CTkLabel(
+            self.sidebar,
+            text="Billing ERP",
+            font=("Segoe UI", 26, "bold"),
+            text_color="white"
+        )
+
+        self.logo.pack(pady=20)
+
+        self.menu_btn = ctk.CTkButton(
+            self.sidebar,
+            text="☰ Menu",
+            width=220,
+            command=self.toggle_sidebar
+        )
+
+        self.menu_btn.pack(pady=10)
+
+        self.dashboard_btn = self.create_sidebar_button(
+            "🏠 Dashboard",
+            self.show_dashboard
+        )
+
+        self.customer_btn = self.create_sidebar_button(
+            "👤 Customers",
+            self.open_customers
+        )
+
+        self.products_btn = self.create_sidebar_button(
+            "📦 Products",
+            self.open_products
+        )
+
+        self.billing_btn = self.create_sidebar_button(
+            "🧾 Billing",
+            self.open_billing
+        )
+
+        self.invoices_btn = self.create_sidebar_button(
+            "📄 Invoices",
+            self.open_invoices
+        )
+
+        self.reports_btn = self.create_sidebar_button(
+            "📊 Reports",
+            self.open_reports
+        )
+
+        self.settings_btn = self.create_sidebar_button(
+            "⚙ Settings",
+            self.open_settings
+        )
+
+        self.logout_btn = self.create_sidebar_button(
+            "🚪 Logout",
+            self.logout
+        )
+
         self.update_clock()
 
-                # ==============================
-        # CARDS SECTION
-        # ==============================
+        self.show_dashboard()
 
-        self.cards_frame = ctk.CTkFrame(
-            self.main_frame,
-            fg_color="transparent"
-        )
-        self.cards_frame.pack(
-            fill="x",
-            padx=20
-        )
 
-        self.create_card(
-            self.cards_frame,
-            "Today's Sales",
-            self.get_today_sales()
-        )
+    # =====================================
+    # COMMON FUNCTIONS
+    # =====================================
 
-        self.create_card(
-            self.cards_frame,
-            "Customers",
-            self.get_customer_count()
+    def create_sidebar_button(self, text, command):
+
+        btn = ctk.CTkButton(
+            self.sidebar,
+            text=text,
+            width=220,
+            height=45,
+            fg_color="transparent",
+            hover_color="#1E293B",
+            anchor="w",
+            command=command
         )
 
-        self.create_card(
-            self.cards_frame,
-            "Products",
-            self.get_product_count()
+        btn.pack(pady=5)
+
+        return btn
+
+
+    def clear_content(self):
+
+        for widget in self.content_frame.winfo_children():
+            widget.destroy()
+
+
+    def update_clock(self):
+
+        self.clock.configure(
+            text=datetime.now().strftime(
+                "%d-%m-%Y  %H:%M:%S"
+            )
         )
 
-        self.create_card(
-            self.cards_frame,
-            "Invoices",
-            self.get_invoice_count()
+        self.root.after(
+            1000,
+            self.update_clock
         )
-
-        # ==============================
-        # SALES ANALYTICS SECTION
-        # ==============================
-
-        self.graph_frame = ctk.CTkFrame(
-            self.main_frame,
-            height=300,
-            fg_color="white",
-            corner_radius=15
-        )
-
-        self.graph_frame.pack(
-            fill="x",
-            padx=20,
-            pady=20
-        )
-
-        self.graph_frame.pack_propagate(False)
-
-        graph_title = ctk.CTkLabel(
-            self.graph_frame,
-            text="Sales Analytics",
-            font=("Segoe UI", 20, "bold")
-        )
-
-        graph_title.pack(pady=20)
-
-        graph_placeholder = ctk.CTkLabel(
-            self.graph_frame,
-            text="Sales Graph Here",
-            font=("Segoe UI", 18),
-            text_color="gray"
-        )
-
-        graph_placeholder.pack(pady=80)
-
-        # ==============================
-        # RECENT INVOICES TABLE
-        # ==============================
-
-        self.table_frame = ctk.CTkFrame(
-            self.main_frame,
-            fg_color="white",
-            corner_radius=15
-        )
-
-        self.table_frame.pack(
-            fill="both",
-            expand=True,
-            padx=10,
-            pady=10
-        )
-
-        table_title = ctk.CTkLabel(
-            self.table_frame,
-            text="Recent Invoices",
-            font=("Segoe UI", 20, "bold")
-        )
-
-        table_title.pack(pady=20)
-
-        columns = (
-            "Invoice No",
-            "Customer",
-            "Amount",
-            "Status",
-            "Date"
-        )
-
-        self.tree = ttk.Treeview(
-            self.table_frame,
-            columns=columns,
-            show="headings",
-            height=10
-        )
-
-        for col in columns:
-
-            self.tree.heading(col, text=col)
-            self.tree.column(col, width=180)
-
-        self.tree.pack(
-            fill="both",
-            expand=True,
-            padx=20,
-            pady=20
-        )
-
-        self.load_recent_invoices()
-
+    
     def get_customer_count(self):
 
         try:
@@ -264,23 +229,28 @@ class Dashboard:
             )
 
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM customers")
+
+            cursor.execute(
+                "SELECT COUNT(*) FROM customers"
+            )
 
             count = cursor.fetchone()[0]
 
             cursor.close()
             conn.close()
 
-            return str(count)
-
+            return count
+        
         except Exception as e:
-            print("Customer Error:", e)
-            return "0"
 
+            print("Customer Error:", e)
+            return 0
+    
 
     def get_product_count(self):
 
         try:
+
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
@@ -290,23 +260,28 @@ class Dashboard:
             )
 
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM products")
+
+            cursor.execute(
+                "SELECT COUNT(*) FROM products"
+            )
 
             count = cursor.fetchone()[0]
 
             cursor.close()
             conn.close()
 
-            return str(count)
+            return count
 
-        except Exception as e:
+        except Exception as e: 
+            
             print("Product Error:", e)
-            return "0"
-
+            return 0
+    
 
     def get_invoice_count(self):
 
         try:
+
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
@@ -316,23 +291,27 @@ class Dashboard:
             )
 
             cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM invoices")
+
+            cursor.execute(
+                "SELECT COUNT(*) FROM invoices"
+        )
 
             count = cursor.fetchone()[0]
 
             cursor.close()
             conn.close()
 
-            return str(count)
+            return count
 
         except Exception as e:
+
             print("Invoice Error:", e)
-            return "0"
-
-
+            return 0
+        
     def get_today_sales(self):
 
         try:
+
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
@@ -344,10 +323,14 @@ class Dashboard:
             cursor = conn.cursor()
 
             cursor.execute("""
-                SELECT IFNULL(SUM(grand_total),0)
-                FROM invoices
-                WHERE DATE(invoice_date)=CURDATE()
-            """)
+            SELECT
+            IFNULL(
+                SUM(grand_total),
+                0
+            )
+            FROM invoices
+            WHERE DATE(invoice_date)=CURDATE()
+             """)
 
             sales = cursor.fetchone()[0]
 
@@ -360,69 +343,171 @@ class Dashboard:
             print("Sales Error:", e)
             return "₹0"
         
-    def create_sidebar_button(self, text, command):
+    
+    def show_dashboard(self):
 
-        btn = ctk.CTkButton(
-        self.sidebar,
-        text=text,
-        width=220,
-        height=45,
-        fg_color="transparent",
-        hover_color="#1E293B",
-        anchor="w",
-        font=("Segoe UI", 16),
-        command=command
-    )
+        self.clear_content()
 
-        btn.pack(pady=5)
+    # ==========================
+    # DASHBOARD TITLE
+    # ==========================
 
-    def create_card(self, parent, title, value):
+        title = ctk.CTkLabel(
+            self.content_frame,
+            text="Dashboard Overview",
+            font=("Segoe UI", 26, "bold")
+        )
+
+        title.pack(
+            anchor="w",
+            padx=20,
+            pady=10
+        )
+
+        refresh_btn = ctk.CTkButton(
+            self.content_frame,
+            text="🔄 Refresh Dashboard",
+            command=self.show_dashboard
+        )
+
+        refresh_btn.pack(
+            anchor="e",
+            padx=20,
+            pady=5
+        )
+
+    # ==========================
+    # CARDS
+    # ==========================
+
+        cards_frame = ctk.CTkFrame(
+            self.content_frame,
+            fg_color="transparent"
+        )
+
+        cards_frame.pack(
+            fill="x",
+            padx=10
+        )
+
+        self.create_dashboard_card(
+            cards_frame,
+            "Today's Sales",
+            self.get_today_sales()
+        )
+
+        self.create_dashboard_card(
+            cards_frame,
+            "Customers",
+            self.get_customer_count()
+        )
+
+        self.create_dashboard_card(
+            cards_frame,
+            "Products",
+            self.get_product_count()
+        )
+
+        self.create_dashboard_card(
+            cards_frame,
+            "Invoices",
+            self.get_invoice_count()
+        )
+
+    # ==========================
+    # RECENT INVOICES
+    # ==========================
+
+        table_frame = ctk.CTkFrame(
+            self.content_frame
+        )
+
+        table_frame.pack(
+            fill="both",
+            expand=True,
+            padx=20,
+            pady=20
+        )
+
+        heading = ctk.CTkLabel(
+            table_frame,
+            text="Recent Invoices",
+            font=("Segoe UI", 22, "bold")
+        )
+
+        heading.pack(pady=10)
+
+        columns = (
+            "Invoice No",
+            "Amount",
+            "Date"
+        )
+
+        tree = ttk.Treeview(
+            table_frame,
+            columns=columns,
+            show="headings",
+            height=10
+        )
+
+        for col in columns:
+
+            tree.heading(
+                col,
+                text=col
+        )
+
+            tree.column(
+                col,
+                width=250
+        )
+
+        tree.pack(
+            fill="both",
+            expand=True,
+            padx=20,
+            pady=20
+        )
+
+        self.load_recent_invoices(tree)
+     
+
+
+    def create_dashboard_card(
+        self,
+        parent,
+        title,
+        value
+    ):
 
         card = ctk.CTkFrame(
             parent,
-            width=250,
-            height=140,
-            fg_color="white",
-            corner_radius=15
+            width=220,
+            height=120
         )
 
-        card.pack(side="left", padx=10, pady=10)
+        card.pack(
+            side="left",
+            padx=10,
+            pady=10
+        )
+
         card.pack_propagate(False)
 
-        title_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             card,
             text=title,
-            font=("Segoe UI",16),
-            text_color="#6B7280"
-        )
+            font=("Segoe UI", 16)
+        ).pack(pady=10)
 
-        title_label.pack(pady=(25,10))
-
-        value_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             card,
-            text=value,
-            font=("Segoe UI",28,"bold"),
-            text_color="#111827"
-        )
+            text=str(value),
+            font=("Segoe UI", 28, "bold")
+        ).pack()
 
-        value_label.pack()
 
-    def update_clock(self):
-
-        current_time = datetime.now().strftime(
-            "%d-%m-%Y  %H:%M:%S"
-        )
-
-        self.clock.configure(
-            text=current_time
-        )
-
-        self.root.after(
-            1000,
-            self.update_clock
-        )
-
-    def load_recent_invoices(self):
+    def load_recent_invoices(self, tree):
 
         try:
 
@@ -438,32 +523,25 @@ class Dashboard:
 
             cursor.execute("""
                 SELECT
-                    invoice_number,
-                    grand_total,
-                    invoice_date
+                invoice_number,
+                grand_total,
+                invoice_date
                 FROM invoices
                 ORDER BY invoice_id DESC
                 LIMIT 10
             """)
 
             rows = cursor.fetchall()
-            print(rows)
 
             for row in rows:
 
-                invoice_no = row[0]
-                amount = f"₹{row[1]}"
-                date = row[2].strftime("%d-%m-%Y")
-
-                self.tree.insert(
+                tree.insert(
                     "",
                     "end",
                     values=(
-                        invoice_no,
-                        "",
-                        amount,
-                        "",
-                        date
+                        row[0],
+                        f"₹{row[1]}",
+                        str(row[2])
                     )
                 )
 
@@ -472,46 +550,134 @@ class Dashboard:
 
         except Exception as e:
 
-            print("Invoice Error:", e)
+            print(e)
+    
 
 
+    def toggle_sidebar(self):
 
+        if self.sidebar_expanded:
 
-    def clear_main_frame(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
+            self.sidebar.configure(width=80)
+            self.sidebar.update_idletasks()
+
+            self.logo.configure(text="ERP")
+            self.menu_btn.configure(text="☰")
+
+            self.dashboard_btn.configure(text="🏠", width=60)
+            self.customer_btn.configure(text="👤",width=60)
+            self.products_btn.configure(text="📦", width=60)
+            self.billing_btn.configure(text="🧾", width=60)
+            self.invoices_btn.configure(text="📄", width=60)
+            self.reports_btn.configure(text="📊", width=60)
+            self.settings_btn.configure(text="⚙", width=60)
+            self.logout_btn.configure(text="🚪", width=60)
+
+            self.sidebar_expanded = False
+
+        else:
+
+            self.sidebar.configure(width=250)
+            self.sidebar.update_idletasks()
+
+            self.logo.configure(text="Billing ERP")
+            
+            self.menu_btn.configure(text = "☰ Menu")
+
+            self.dashboard_btn.configure(text="🏠 Dashboard", width=220)
+            self.customer_btn.configure(text="👤 Customers", width=220)
+            self.products_btn.configure(text="📦 Products", width=220)
+            self.billing_btn.configure(text="🧾 Billing", width=220)
+            self.invoices_btn.configure(text="📄 Invoices", width=220)
+            self.reports_btn.configure(text="📊 Reports", width=220)
+            self.settings_btn.configure(text="⚙ Settings", width=220)
+            self.logout_btn.configure(text="🚪 Logout", width=220)
+
+            self.sidebar_expanded = True
 
 
     def open_customers(self):
-        self.clear_main_frame()
+
+        self.clear_content()
+
         CustomersPage(
-            self.root
-    )
+            self.content_frame
+        )
 
 
     def open_products(self):
-        self.clear_main_frame()
-        ProductsPage(
-            self.root
-    )
 
-    def show_dashboard(self):
-        self.clear_main_frame()
-        Dashboard(
-            self.root
-    )
+        self.clear_content()
+
+        ProductsPage(
+            self.content_frame
+        )
+
+
     def open_billing(self):
-        print("Billing Clicked")    
+
+        self.clear_content()
+
+        label = ctk.CTkLabel(
+            self.content_frame,
+            text="Billing Module",
+            font=("Segoe UI", 30, "bold")
+        )
+
+        label.pack(pady=50)
+
 
     def open_invoices(self):
-        print("Invoices Clicked")
+
+        self.clear_content()
+
+        label = ctk.CTkLabel(
+            self.content_frame,
+            text="Invoices Module",
+            font=("Segoe UI", 30, "bold")
+        )
+
+        label.pack(pady=50)
+
 
     def open_reports(self):
-        print("Reports Clicked")
+
+        self.clear_content()
+
+        label = ctk.CTkLabel(
+            self.content_frame,
+            text="Reports Module",
+            font=("Segoe UI", 30, "bold")
+        )
+
+        label.pack(pady=50)
+
 
     def open_settings(self):
-        print("Settings Clicked")
+
+        self.clear_content()
+
+        label = ctk.CTkLabel(
+            self.content_frame,
+            text="Settings Module",
+            font=("Segoe UI", 30, "bold")
+        )
+
+        label.pack(pady=50)
+
+
     def logout(self):
+
         self.root.destroy()
-    
-        
+
+
+if __name__ == "__main__":
+
+    root = ctk.CTk()
+
+    root.geometry("1500x850")
+    root.minsize(1200, 700)
+
+    Dashboard(root)
+
+    root.mainloop()
