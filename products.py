@@ -7,7 +7,7 @@ class ProductsPage:
 
         title = ctk.CTkLabel(
             parent,
-            text="text="Product Management ERP",
+            text="text=Product Management ERP",
             font=("Segoe UI", 26, "bold")
         )
         title.pack(pady=20)
