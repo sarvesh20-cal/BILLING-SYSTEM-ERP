@@ -23,6 +23,8 @@ class LoginPage:
 
         self.gold = "#D4AF37"
 
+
+
         self.white = "#FFFFFF"
 
         self.gray = "#CBD5E1"
