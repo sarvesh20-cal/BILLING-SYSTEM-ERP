@@ -16,13 +16,20 @@ class AuthSystem:
 
         self.cursor = self.connection.cursor()
 
-        # DEBUG
-        self.cursor.execute("SELECT @@port")
-        print("Connected Port:", self.cursor.fetchone())
+        print("Database Connected Successfully")
+
+
+    # ==========================================================
+    # LOGIN USER
+    # ==========================================================
 
     def login_user(self, username, password):
 
         try:
+
+            # --------------------------------------------------
+            # GET USER
+            # --------------------------------------------------
 
             query = """
                 SELECT
@@ -40,10 +47,12 @@ class AuthSystem:
             self.cursor.execute(query, (username,))
             user = self.cursor.fetchone()
 
-            # DEBUG
-            print("User Record:", user)
+            # --------------------------------------------------
+            # USER NOT FOUND
+            # --------------------------------------------------
 
             if not user:
+
                 return {
                     "status": False,
                     "message": "User Not Found"
@@ -54,53 +63,66 @@ class AuthSystem:
             db_username = user[2]
             stored_password = user[3]
             role = user[4]
-            failed_attempts = user[5]
-            is_locked = user[6]
 
-            # DEBUG
-            print("Entered Password:", password)
-            print("Stored Password:", stored_password)
-            print("Password Length:", len(stored_password))
-            print("Failed Attempts:", failed_attempts)
-            print("Is Locked:", is_locked)
+            # Handle NULL values safely
+            failed_attempts = user[5] if user[5] is not None else 0
+            is_locked = user[6] if user[6] is not None else 0
 
-            # Account locked
+
+            # --------------------------------------------------
+            # CHECK ACCOUNT LOCK
+            # --------------------------------------------------
+
             if is_locked:
+
                 return {
                     "status": False,
                     "message": "Account Locked. Contact Administrator."
                 }
 
-            # Password verification
-            match = bcrypt.checkpw(
-                password.encode(),
-                stored_password.encode()
-            )
 
-            # DEBUG
-            print("Password Match:", match)
+            # --------------------------------------------------
+            # PASSWORD VERIFICATION
+            # Supports bcrypt AND old plain-text passwords
+            # --------------------------------------------------
+
+            match = False
+
+            try:
+
+                # If password is bcrypt encrypted
+                if stored_password.startswith("$2"):
+
+                    match = bcrypt.checkpw(
+                        password.encode("utf-8"),
+                        stored_password.encode("utf-8")
+                    )
+
+                else:
+
+                    # Old/plain-text password
+                    match = password == stored_password
+
+            except Exception as password_error:
+
+                print("Password Check Error:", password_error)
+
+                # Fallback for old passwords
+                match = password == stored_password
+
+
+            # ==================================================
+            # LOGIN SUCCESS
+            # ==================================================
 
             if match:
 
+                # Reset failed attempts
                 self.cursor.execute(
                     """
                     UPDATE users
-                    SET failed_attempts = 0,
-                        last_login = NOW()
+                    SET failed_attempts = 0
                     WHERE user_id = %s
-                    """,
-                    (user_id,)
-                )
-
-                self.connection.commit()
-
-                self.cursor.execute(
-                    """
-                    INSERT INTO login_logs(
-                        user_id,
-                        status
-                    )
-                    VALUES(%s,'SUCCESS')
                     """,
                     (user_id,)
                 )
@@ -117,44 +139,32 @@ class AuthSystem:
                     "role": role
                 }
 
+
+            # ==================================================
+            # WRONG PASSWORD
+            # ==================================================
+
             else:
+
+                failed_attempts = failed_attempts + 1
 
                 self.cursor.execute(
                     """
                     UPDATE users
-                    SET failed_attempts = failed_attempts + 1
+                    SET failed_attempts = %s
                     WHERE user_id = %s
                     """,
-                    (user_id,)
+                    (failed_attempts, user_id)
                 )
 
                 self.connection.commit()
 
-                self.cursor.execute(
-                    """
-                    SELECT failed_attempts
-                    FROM users
-                    WHERE user_id = %s
-                    """,
-                    (user_id,)
-                )
 
-                attempts = self.cursor.fetchone()[0]
+                # --------------------------------------------------
+                # LOCK AFTER 5 FAILED ATTEMPTS
+                # --------------------------------------------------
 
-                self.cursor.execute(
-                    """
-                    INSERT INTO login_logs(
-                        user_id,
-                        status
-                    )
-                    VALUES(%s,'FAILED')
-                    """,
-                    (user_id,)
-                )
-
-                self.connection.commit()
-
-                if attempts >= 5:
+                if failed_attempts >= 5:
 
                     self.cursor.execute(
                         """
@@ -167,19 +177,28 @@ class AuthSystem:
 
                     self.connection.commit()
 
-                    print("ACCOUNT LOCKED")
-
                     return {
                         "status": False,
                         "message": "Account Locked After 5 Failed Attempts"
                     }
 
-                print("LOGIN FAILED")
 
                 return {
                     "status": False,
-                    "message": f"Incorrect Password ({attempts}/5)"
+                    "message":
+                        f"Incorrect Password ({failed_attempts}/5)"
                 }
+
+
+        except mysql.connector.Error as err:
+
+            print("DATABASE ERROR:", err)
+
+            return {
+                "status": False,
+                "message": f"Database Error: {err}"
+            }
+
 
         except Exception as err:
 
@@ -190,10 +209,21 @@ class AuthSystem:
                 "message": str(err)
             }
 
+
+    # ==========================================================
+    # CLOSE DATABASE CONNECTION
+    # ==========================================================
+
     def close_connection(self):
 
-        if self.cursor:
-            self.cursor.close()
+        try:
 
-        if self.connection:
-            self.connection.close()
+            if self.cursor:
+                self.cursor.close()
+
+            if self.connection:
+                self.connection.close()
+
+        except Exception as e:
+
+            print("Connection Close Error:", e)
