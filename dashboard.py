@@ -5,6 +5,8 @@ import mysql.connector
 
 from customers import CustomersPage
 from products import ProductsPage
+from ai_dashboard import AIDashboard
+from ai_assistant import AIAssistant
 
 
 class Dashboard:
@@ -145,6 +147,17 @@ class Dashboard:
             "📦 Products",
             self.open_products
         )
+        self.ai_dashboard_btn = self.create_sidebar_button(
+    "🤖 AI Dashboard",
+           self.open_ai_dashboard
+)
+
+        self.ai_assistant_btn = self.create_sidebar_button(
+    "💬 AI Assistant",
+           self.open_ai_assistant
+)
+        
+
 
         self.billing_btn = self.create_sidebar_button(
             "🧾 Billing",
@@ -325,7 +338,7 @@ class Dashboard:
             cursor.execute("""
             SELECT
             IFNULL(
-                SUM(grand_total),
+                SUM(grandtotal),
                 0
             )
             FROM invoices
@@ -524,7 +537,7 @@ class Dashboard:
             cursor.execute("""
                 SELECT
                 invoice_number,
-                grand_total,
+                grandtotal,
                 invoice_date
                 FROM invoices
                 ORDER BY invoice_id DESC
@@ -567,6 +580,8 @@ class Dashboard:
             self.dashboard_btn.configure(text="🏠", width=60)
             self.customer_btn.configure(text="👤",width=60)
             self.products_btn.configure(text="📦", width=60)
+            self.ai_dashboard_btn.configure(text="🤖", width=60)
+            self.ai_assistant_btn.configure(text="💬", width=60)
             self.billing_btn.configure(text="🧾", width=60)
             self.invoices_btn.configure(text="📄", width=60)
             self.reports_btn.configure(text="📊", width=60)
@@ -587,6 +602,8 @@ class Dashboard:
             self.dashboard_btn.configure(text="🏠 Dashboard", width=220)
             self.customer_btn.configure(text="👤 Customers", width=220)
             self.products_btn.configure(text="📦 Products", width=220)
+            self.ai_dashboard_btn.configure(text="🤖 AI Dashboard", width=220)
+            self.ai_assistant_btn.configure(text="💬 AI Assistant", width=220)
             self.billing_btn.configure(text="🧾 Billing", width=220)
             self.invoices_btn.configure(text="📄 Invoices", width=220)
             self.reports_btn.configure(text="📊 Reports", width=220)
@@ -594,6 +611,7 @@ class Dashboard:
             self.logout_btn.configure(text="🚪 Logout", width=220)
 
             self.sidebar_expanded = True
+
 
 
     def open_customers(self):
@@ -612,6 +630,24 @@ class Dashboard:
         ProductsPage(
             self.content_frame
         )
+
+
+    def open_ai_dashboard(self):
+
+        self.clear_content()
+
+        AIDashboard(
+            self.content_frame
+        ).pack(fill="both", expand=True)
+
+
+    def open_ai_assistant(self):
+
+        self.clear_content()
+
+        AIAssistant(
+            self.content_frame
+        ).pack(fill="both", expand=True)
 
 
     def open_billing(self):
